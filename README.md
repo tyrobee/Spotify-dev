@@ -15,6 +15,7 @@ I built this project because I love listening to music and wanted a **dedicated 
 
 #Circuit Diagram 
 
+![Photo 4](P6.png)
 
 
 
