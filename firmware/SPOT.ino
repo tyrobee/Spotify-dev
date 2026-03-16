@@ -6,21 +6,24 @@
 #include <SpotifyEsp32.h>
 #include <SPI.h>
 
-#define TFT_CS 1
-#define TFT_RST 2
-#define TFT_DC 3
+#define TFT_CS 7
+#define TFT_RST 8
+#define TFT_DC 5
 #define TFT_SCLK 4
-#define TFT_MOSI 5
+#define TFT_MOSI 6
 
-// Buttons
-#define PLAY_BUTTON 12
-#define NEXT_BUTTON 13
-#define PREV_BUTTON 14
+#define PLAY_BUTTON 0
+#define NEXT_BUTTON 1
+#define PREV_BUTTON 2
+
+#define BATTERY_PIN 3
+#define BATTERY_BAR_WIDTH 100
+#define BATTERY_BAR_HEIGHT 8
 
 char* SSID = "YOUR WIFI SSID";
 const char* PASSWORD = "YOUR WIFI PASSWORD";
-const char* CLIENT_ID = "YOUR CLIENT ID FROM THE SPOTIFY DASHBOARD";
-const char* CLIENT_SECRET = "YOUR CLIENT SECRET FROM THE SPOTIFY DASHBOARD";
+const char* CLIENT_ID = "YOUR CLIENT ID";
+const char* CLIENT_SECRET = "YOUR CLIENT SECRET";
 
 String lastArtist;
 String lastTrackname;
@@ -28,7 +31,26 @@ String lastTrackname;
 Spotify sp(CLIENT_ID, CLIENT_SECRET);
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
 
+float getBatteryVoltage()
+{
+  int raw = analogRead(BATTERY_PIN);
+  float voltage = (raw / 4095.0) * 3.3;
+  voltage = voltage * 2;
+  return voltage;
+}
 
+void drawBatteryBar()
+{
+  float voltage = getBatteryVoltage();
+  float percent = (voltage - 3.0) / (4.2 - 3.0);
+  if(percent < 0) percent = 0;
+  if(percent > 1) percent = 1;
+  int filled = percent * BATTERY_BAR_WIDTH;
+
+  tft.drawRect(20, 0, BATTERY_BAR_WIDTH, BATTERY_BAR_HEIGHT, ST77XX_WHITE);
+  tft.fillRect(20, 0, filled, BATTERY_BAR_HEIGHT, ST77XX_GREEN);
+  tft.fillRect(20 + filled, 0, BATTERY_BAR_WIDTH - filled, BATTERY_BAR_HEIGHT, ST77XX_BLACK);
+}
 
 void drawEqualizer()
 {
@@ -39,106 +61,93 @@ void drawEqualizer()
     int height = random(10,35);
     int x = 10 + (i * 20);
 
-    // clear previous bar
     tft.fillRect(x,100,10,60,ST77XX_BLACK);
-
-    // draw bar
     tft.fillRect(x, baseY - height, 10, height, ST77XX_GREEN);
   }
 }
 
+void setup()
+{
+  Serial.begin(115200);
 
-void setup() {
+  pinMode(PLAY_BUTTON, INPUT_PULLUP);
+  pinMode(NEXT_BUTTON, INPUT_PULLUP);
+  pinMode(PREV_BUTTON, INPUT_PULLUP);
 
-    Serial.begin(115200);
+  analogReadResolution(12);
+  pinMode(BATTERY_PIN, INPUT);
 
-    pinMode(PLAY_BUTTON, INPUT_PULLUP);
-    pinMode(NEXT_BUTTON, INPUT_PULLUP);
-    pinMode(PREV_BUTTON, INPUT_PULLUP);
+  tft.initR(INITR_BLACKTAB);
+  tft.setRotation(1);
+  tft.fillScreen(ST77XX_BLACK);
 
-    tft.initR(INITR_BLACKTAB);
-    tft.setRotation(1);
-    Serial.println("TFT Initialized!");
-    tft.fillScreen(ST77XX_BLACK);
+  randomSeed(analogRead(0));
 
-    randomSeed(analogRead(0));
+  WiFi.begin(SSID, PASSWORD);
 
-    WiFi.begin(SSID, PASSWORD);
-    Serial.print("Connecting to WiFi...");
+  while(WiFi.status() != WL_CONNECTED)
+  {
+    delay(1000);
+  }
 
-    while(WiFi.status() != WL_CONNECTED)
-    {
-        delay(1000);
-        Serial.print(".");
-    }
+  tft.setCursor(0,0);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(1);
+  tft.write(WiFi.localIP().toString().c_str());
 
-    Serial.printf("\nConnected!\n");
+  sp.begin();
 
-    tft.setCursor(0,0);
-    tft.write(WiFi.localIP().toString().c_str());
+  while(!sp.is_auth())
+  {
+    sp.handle_client();
+  }
 
-    sp.begin();
-
-    while(!sp.is_auth()){
-        sp.handle_client();
-    }
-
-    Serial.println("Authenticated");
+  tft.fillScreen(ST77XX_BLACK);
 }
-
 
 void loop()
 {
+  if(digitalRead(PLAY_BUTTON) == LOW)
+  {
+    sp.start_resume_playback();
+    delay(400);
+  }
 
-    // BUTTON CONTROLS
+  if(digitalRead(NEXT_BUTTON) == LOW)
+  {
+    sp.skip();
+    delay(400);
+  }
 
-    if(digitalRead(PLAY_BUTTON) == LOW)
-    {
-        sp.start_resume_playback();
-        delay(400);
-    }
+  if(digitalRead(PREV_BUTTON) == LOW)
+  {
+    sp.previous();
+    delay(400);
+  }
 
-    if(digitalRead(NEXT_BUTTON) == LOW)
-    {
-        sp.skip();
-        delay(400);
-    }
+  String currentArtist = sp.current_artist_names();
+  String currentTrackname = sp.current_track_name();
 
-    if(digitalRead(PREV_BUTTON) == LOW)
-    {
-        sp.previous();
-        delay(400);
-    }
+  if (lastArtist != currentArtist && currentArtist != "Something went wrong" && !currentArtist.isEmpty())
+  {
+    tft.fillScreen(ST77XX_BLACK);
+    lastArtist = currentArtist;
+    tft.setCursor(10,15);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(2);
+    tft.write(lastArtist.c_str());
+  }
 
+  if (lastTrackname != currentTrackname && currentTrackname != "Something went wrong" && currentTrackname != "null")
+  {
+    lastTrackname = currentTrackname;
+    tft.setCursor(10,50);
+    tft.setTextSize(2);
+    tft.write(lastTrackname.c_str());
+  }
 
-    String currentArtist = sp.current_artist_names();
-    String currentTrackname = sp.current_track_name();
+  drawBatteryBar();
+  drawEqualizer();
 
-
-    if (lastArtist != currentArtist && currentArtist != "Something went wrong" && !currentArtist.isEmpty()) {
-
-        tft.fillScreen(ST77XX_BLACK);
-
-        lastArtist = currentArtist;
-
-        Serial.println("Artist: " + lastArtist);
-
-        tft.setCursor(10,10);
-        tft.write(lastArtist.c_str());
-    }
-
-    if (lastTrackname != currentTrackname && currentTrackname != "Something went wrong" && currentTrackname != "null") {
-
-        lastTrackname = currentTrackname;
-
-        Serial.println("Track: " + lastTrackname);
-
-        tft.setCursor(10,40);
-        tft.write(lastTrackname.c_str());
-    }
-
-    // Equalizer animation
-    drawEqualizer();
-
-    delay(150);
+  delay(150);
 }
