@@ -9,16 +9,16 @@ I built this project because I love listening to music and wanted a **dedicated 
 
 ![Preview](./Photo/P1.png)
 
-![Photo 2](P2.png)
+![Preview](./Photo/P2.png)
 
-![Photo 3](P3.png)
+![Preview](./Photo/P3.png)
 
 #Circuit Diagram 
 
-![Photo 4](P6.png)
 
+![Preview](./Photo/P6.png)
 
 
 ##BOM
 
-![Photo 4](P4.png)
+![Preview](./Photo/P4.png)
