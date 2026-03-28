@@ -7,7 +7,7 @@ I built this project because I love listening to music and wanted a **dedicated 
 
 ## CAD Designs
 
-![Photo 1](P1.png)
+![Preview](./Photo/P1.png)
 
 ![Photo 2](P2.png)
 
