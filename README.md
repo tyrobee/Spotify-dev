@@ -21,7 +21,7 @@ I built this project because I love listening to music and wanted a **dedicated 
 
 ## Schematics 
 
-![Preview](./Photo/P5.png)
+![Preview](./Photo/P7.png)
 
 ## BOM
 
