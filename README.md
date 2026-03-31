@@ -13,9 +13,6 @@ I built this project because I love listening to music and wanted a **dedicated 
 
 ![Preview](./Photo/P3.png)
 
-## Circuit Diagram 
-
-
 ![Preview](./Photo/P6.png)
 
 
